@@ -9,7 +9,16 @@ class CPU:
         """Construct a new CPU."""
         self.ram = [0] * 256 # Hold 256 bytes of memory 
         self.reg = [0] * 8 # Hold 8 general-purpose registers
+        self.reg[7] = 0xF4
         self.pc = 0 # program counter
+        self.branch_table = {
+            0b10000010: self.LDI,  # Load / Set a specified register to a specified value
+            0b01000111: self.PRN,  # Print numeric value store in a register
+            0b00000001: self.HLT,  # Halt the CPU and exit the emulator
+            0b10100010: self.MUL,  # multiply
+            0b01000101: self.PUSH,
+            0b01000110: self.POP,
+        }
 
     # MAR: Memory Address Register, holds the memory address we're reading or writing
     # MDR: Memory Data Register, holds the value to write or the value just read
@@ -21,6 +30,46 @@ class CPU:
     def ram_write(self, MDR, MAR):
         self.ram[MAR] = MDR
 
+    def LDI(self): 
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2)
+        self.reg[operand_a] = operand_b
+        self.pc += 3
+   
+    def PRN(self): 
+        operand_a = self.ram_read(self.pc + 1)
+        print(self.reg[operand_a])
+        self.pc += 2
+
+    def HLT(self): 
+        sys.exit()
+        self.pc += 1
+
+    def MUL(self): 
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2)
+        result = self.reg[operand_a] * self.reg[operand_b]
+        print(result)
+        self.pc += 3
+
+    def PUSH(self): 
+        given_register = self.ram[self.pc + 1]
+        value_in_register = self.reg[given_register]
+        # decrement the stack pointer
+        self.reg[7] -= 1
+        # write the value at the given register to memory at the stack pointer location
+        self.ram[self.reg[7]] = value_in_register
+        self.pc += 2
+
+    def POP(self): 
+        given_register = self.ram[self.pc + 1]
+        # write the value in memory at the top of the stack to the given register
+        value_from_memory = self.ram[self.reg[7]]
+        self.reg[given_register ] = value_from_memory
+        # increment the stack pointer
+        self.reg[7] += 1
+        self.pc += 2
+  
     def load(self):
         """Load a program into memory."""
   
@@ -94,31 +143,13 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-
-        LDI = 0b10000010 # Load / Set a specified register to a specified value
-        PRN = 0b01000111 # Print numeric value store in a register
-        HLT = 0b00000001 # Halt the CPU and exit the emulator
-        MUL = 0B10100010 # multiply
         running = True
-
         while running:
-            # IR: Instruction Register, contains a copy of the currently executing instruction
-            IR = self.ram[self.pc]
-            operand_a = self.ram_read(self.pc + 1)
-            operand_b = self.ram_read(self.pc + 2)
+            IR = self.ram[self.pc] # IR: Instruction Register, contains a copy of the currently executing instruction
+            if IR in self.branch_table:
+                self.branch_table[IR]()
 
-            if IR == LDI:
-                self.reg[operand_a] = operand_b
-                self.pc += 3
-            elif IR == PRN:
-                print(self.reg[operand_a])
-                self.pc += 2
-            elif IR == MUL:
-                result = self.reg[operand_a] * self.reg[operand_b]
-                print(result)
-                self.pc += 3
-            elif IR == HLT:
-                running = False
-            else:
-                print(f'unknown instructions {IR}')
-                sys.exit(1)
+# cd ls8 
+# py -3 ls8.py  examples/print8.ls8
+# py -3 ls8.py  examples/mult.ls8
+# py -3 ls8.py  examples/stack.ls8
