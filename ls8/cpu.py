@@ -24,14 +24,14 @@ class CPU:
     def load(self):
         """Load a program into memory."""
   
-        # if len(sys.argv) < 2:
-        #     print('second filename missing')
-        #     sys.exit(1)
-        
-        address = 0
+        if len(sys.argv) < 2:
+            print('second filename missing')
+            sys.exit(1)
+    
+        filename = sys.argv[1]
         try:  
-            with open('print8.ls8') as file:
-            # with open(sys.argv[1]) as file:
+            address = 0
+            with open(filename) as file:
                 for line in file:
                     split_line = line.split('#') # split line on # symbol
                     code_value = split_line[0].strip() # remove white space and /n character
@@ -98,6 +98,7 @@ class CPU:
         LDI = 0b10000010 # Load / Set a specified register to a specified value
         PRN = 0b01000111 # Print numeric value store in a register
         HLT = 0b00000001 # Halt the CPU and exit the emulator
+        MUL = 0B10100010 # multiply
         running = True
 
         while running:
@@ -112,6 +113,10 @@ class CPU:
             elif IR == PRN:
                 print(self.reg[operand_a])
                 self.pc += 2
+            elif IR == MUL:
+                result = self.reg[operand_a] * self.reg[operand_b]
+                print(result)
+                self.pc += 3
             elif IR == HLT:
                 running = False
             else:
