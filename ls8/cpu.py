@@ -16,12 +16,16 @@ class CPU:
             0b01000111: self.PRN,  # Print numeric value store in a register
             0b00000001: self.HLT,  # Halt the CPU and exit the emulator
             0b10100010: self.MUL,  # multiply
+            0b10100000: self.ADD,  # add
             0b01000101: self.PUSH,
             0b01000110: self.POP,
+            0b01010000: self.CALL,
+            0b00010001: self.RET
         }
 
     # MAR: Memory Address Register, holds the memory address we're reading or writing
     # MDR: Memory Data Register, holds the value to write or the value just read
+
     # Accept the address to read and return the value stored there
     def ram_read(self, MAR):
         return self.ram[MAR]
@@ -48,8 +52,13 @@ class CPU:
     def MUL(self): 
         operand_a = self.ram_read(self.pc + 1)
         operand_b = self.ram_read(self.pc + 2)
-        result = self.reg[operand_a] * self.reg[operand_b]
-        print(result)
+        self.alu('MUL', operand_a, operand_b)
+        self.pc += 3
+
+    def ADD(self): 
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2)
+        self.alu('ADD', operand_a, operand_b)
         self.pc += 3
 
     def PUSH(self): 
@@ -70,6 +79,22 @@ class CPU:
         self.reg[7] += 1
         self.pc += 2
   
+    def CALL(self): 
+        # get the given register in the operand
+        given_register = self.ram[self.pc + 1]
+        # store the return address (self.pc + 2) onto the stack and decrement the SP
+        self.reg[7] -= 1
+        # write the return address
+        self.ram[self.reg[7]] = self.pc + 2
+        # set pc to value inside given_regrister
+        self.pc = self.reg[given_register]
+    
+    def RET(self): 
+        # set pc to value at the top of the stack
+        self.pc = self.ram[self.reg[7]]
+        # pop from the stack 
+        self.reg[7] += 1
+
     def load(self):
         """Load a program into memory."""
   
@@ -118,6 +143,10 @@ class CPU:
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         #elif op == "SUB": etc
+
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
+        
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -153,3 +182,4 @@ class CPU:
 # py -3 ls8.py  examples/print8.ls8
 # py -3 ls8.py  examples/mult.ls8
 # py -3 ls8.py  examples/stack.ls8
+# py -3 ls8.py  examples/call.ls8
